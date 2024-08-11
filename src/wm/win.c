@@ -1907,6 +1907,18 @@ bool win_process_animation_and_state_change(struct session *ps, struct win *w, d
 	log_debug("Starting animation %s for window %#010x (%s)",
 	          animation_trigger_names[trigger], win_id(w), w->name);
 
+	if (win_check_flags_any(w, WIN_FLAGS_PIXMAP_STALE)) {
+		// Grab the old pixmap, animations might need it
+		if (w->old_win_image) {
+			ps->backend_data->ops.release_image(ps->backend_data, w->old_win_image);
+		}
+		// TODO(yshui): might need to copy for NVIDIA. because acquiring a new
+		// window image before freeing the old one could be problematic with
+		// NVIDIA.
+		w->old_win_image = w->win_image;
+		w->win_image = NULL;
+	}
+
 	auto new_animation = script_instance_new(wopts.animations[trigger].script);
 	if (w->running_animation_instance) {
 		script_instance_resume_from(w->running_animation_instance, new_animation);

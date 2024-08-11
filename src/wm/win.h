@@ -101,6 +101,9 @@ struct win {
 	/// backend data attached to this window. Only available when
 	/// `state` is not UNMAPPED
 	image_handle win_image;
+	/// The old window image before the window image is refreshed. This is used for
+	/// animation, and is only kept alive for the duration of the animation.
+	image_handle old_win_image;
 	image_handle shadow_image;
 	image_handle mask_image;
 	// TODO(yshui) only used by legacy backends, remove.
