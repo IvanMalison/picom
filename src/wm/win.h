@@ -266,13 +266,7 @@ struct win {
 	unsigned int animation_block[ANIMATION_TRIGGER_COUNT];
 };
 
-struct win_script_context {
-	double x, y, width, height;
-	double x_before, y_before, width_before, height_before;
-	double opacity_before, opacity;
-	double monitor_x, monitor_y;
-	double monitor_width, monitor_height;
-};
+
 static_assert(SCRIPT_CTX_PLACEHOLDER_BASE > sizeof(struct win_script_context),
               "win_script_context too large");
 

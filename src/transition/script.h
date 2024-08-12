@@ -8,7 +8,7 @@
 #include <stddef.h>
 
 #include <uthash.h>
-#include "../wm/win.h"
+#include "wm/win_script_context.h"
 
 struct script_context_info {
 	const char *name;
@@ -35,7 +35,7 @@ struct script_parse_config {
 struct script;
 struct script_instance {
 	const struct script *script;
-	const struct win_script_context win_ctx;
+	struct win_script_context win_ctx;
 	double memory[];
 };
 enum script_evaluation_result {

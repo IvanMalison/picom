@@ -1793,7 +1793,7 @@ static bool win_advance_animation(struct win *w, double delta_t,
 		/* 	 win_ctx->x, win_ctx->y, win_ctx->x_before, win_ctx->y_before); */
 		auto result =
 			script_instance_evaluate(w->running_animation_instance,
-						 (void *)&w->running_animation_instance.win_ctx);
+						 (void *)&w->running_animation_instance->win_ctx);
 		if (win_ctx->x_before != x_before) {
 			log_info("Script evaluation changed x_before");
 		}
@@ -1933,9 +1933,9 @@ bool win_process_animation_and_state_change(struct session *ps, struct win *w, d
 
 	log_info("Animating with context, x: %f, y: %f, bx: %f, by: %f",
 		 win_ctx.x, win_ctx.y, win_ctx.x_before, win_ctx.y_before);
-	log_info("Actual geometries: x: %d, y: %d, bx: %d, by: %d, px: %d, py: %d, ox: %d oy; %d",
-		  w->g.x, w->g.y, w->previous.g.x, w->previous.g.y,
-		 w->pending_g.x, w->pending_g.y);
+	/* log_info("Actual geometries: x: %d, y: %d, bx: %d, by: %d, px: %d, py: %d, ox: %d oy: %d", */
+	/* 	 w->g.x, w->g.y, w->previous.g.x, w->previous.g.y, */
+	/* 	 w->pending_g.x, w->pending_g.y); */
 
 	if (win_check_flags_any(w, WIN_FLAGS_PIXMAP_STALE)) {
 		// Grab the old pixmap, animations might need it
