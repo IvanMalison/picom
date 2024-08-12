@@ -1659,6 +1659,7 @@ static void handle_pending_updates(struct session *ps, double delta_t) {
 		// animation finished
 		if (w != NULL && win_process_animation_and_state_change(ps, w, delta_t)) {
 			free(w->running_animation_instance);
+			w->previous.g = w->g;
 			w->running_animation_instance = NULL;
 			w->in_openclose = false;
 			if (w->old_win_image != NULL) {

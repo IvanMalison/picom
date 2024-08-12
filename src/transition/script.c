@@ -1143,13 +1143,15 @@ void script_specialize(struct script *script,
 	}
 }
 
-struct script_instance *script_instance_new(const struct script *script) {
+struct script_instance *script_instance_new(const struct script *script,
+					    const struct win_script_context *win_ctx) {
 	// allocate no space for the variable length array is UB.
 	unsigned memory_size = max2(1, script->n_slots + script->stack_size);
 	struct script_instance *instance =
 	    calloc(1, sizeof(struct script_instance) + sizeof(double[memory_size]));
 	allocchk(instance);
 	instance->script = script;
+	instance->win_ctx = *win_ctx;
 	for (unsigned i = 0; i < script->n_slots; i++) {
 		instance->memory[i] = NAN;
 	}
@@ -1294,7 +1296,7 @@ TEST_CASE(scripts_1) {
 		HASH_FIND_STR(script->vars, "c", c);
 		TEST_NOTEQUAL(c, NULL);
 
-		struct script_instance *instance = script_instance_new(script);
+		struct script_instance *instance = script_instance_new(script, NULL);
 		auto result = script_instance_evaluate(instance, NULL);
 		TEST_EQUAL(result, SCRIPT_EVAL_OK);
 		TEST_EQUAL(instance->memory[script->elapsed_slot + 1], 10.5);

@@ -8,6 +8,7 @@
 #include <stddef.h>
 
 #include <uthash.h>
+#include "../wm/win.h"
 
 struct script_context_info {
 	const char *name;
@@ -34,6 +35,7 @@ struct script_parse_config {
 struct script;
 struct script_instance {
 	const struct script *script;
+	const struct win_script_context win_ctx;
 	double memory[];
 };
 enum script_evaluation_result {
@@ -66,7 +68,8 @@ script_instance_evaluate(struct script_instance *instance, void *context);
 /// This resuming behavior can be turned off by setting `reset = true;` in the transition
 /// configuration, in which case the user defined `start` value will always be used.
 void script_instance_resume_from(struct script_instance *old, struct script_instance *new_);
-struct script_instance *script_instance_new(const struct script *script);
+struct script_instance *script_instance_new(const struct script *script,
+					    const struct win_script_context *win_ctx);
 /// Get the total duration slot of a script.
 unsigned script_total_duration_slot(const struct script *script);
 unsigned script_elapsed_slot(const struct script *script);

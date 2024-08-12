@@ -1726,23 +1726,23 @@ struct win_script_context win_script_context_prepare(struct session *ps, struct 
 	    monitor_index >= 0
 	        ? *pixman_region32_extents(&ps->monitors.regions[monitor_index])
 	        : (pixman_box32_t){
-	              .x1 = 0, .y1 = 0, .x2 = ps->root_width, .y2 = ps->root_height};
+			.x1 = 0, .y1 = 0, .x2 = ps->root_width, .y2 = ps->root_height};
 	struct win_script_context ret = {
-	    .x = w->g.x,
-	    .y = w->g.y,
-	    .width = w->widthb,
-	    .height = w->heightb,
-	    .opacity = w->opacity,
-	    .x_before = w->previous.g.x,
-	    .y_before = w->previous.g.y,
-	    .width_before = w->previous.g.width + w->previous.g.border_width * 2,
-	    .height_before = w->previous.g.height + w->previous.g.border_width * 2,
-	    .opacity_before = w->previous.opacity,
-	    .monitor_x = monitor.x1,
-	    .monitor_y = monitor.y1,
-	    .monitor_width = monitor.x2 - monitor.x1,
-	    .monitor_height = monitor.y2 - monitor.y1,
-	};
+	    .x = (double)w->g.x,
+	    .y = (double)w->g.y,
+	    .width = (double)w->widthb,
+	    .height = (double)w->heightb,
+	    .opacity = (double)w->opacity,
+	    .x_before = (double)w->previous.g.x,
+	    .y_before = (double)w->previous.g.y,
+	    .width_before = (double)(w->previous.g.width + w->previous.g.border_width * 2),
+	    .height_before = (double)(w->previous.g.height + w->previous.g.border_width * 2),
+	    .opacity_before = (double)w->previous.opacity,
+	    .monitor_x = (double)monitor.x1,
+	    .monitor_y = (double)monitor.y1,
+	    .monitor_width = (double)(monitor.x2 - monitor.x1),
+	    .monitor_height = (double)(monitor.y2 - monitor.y1),
+	};;
 	return ret;
 }
 
@@ -1788,8 +1788,15 @@ static bool win_advance_animation(struct win *w, double delta_t,
 		auto elapsed_slot =
 		    script_elapsed_slot(w->running_animation_instance->script);
 		w->running_animation_instance->memory[elapsed_slot] += delta_t;
+		double x_before = win_ctx->x_before;
+		/* log_info("Animating with context, x: %f, y: %f, bx: %f, by: %f", */
+		/* 	 win_ctx->x, win_ctx->y, win_ctx->x_before, win_ctx->y_before); */
 		auto result =
-		    script_instance_evaluate(w->running_animation_instance, (void *)win_ctx);
+			script_instance_evaluate(w->running_animation_instance,
+						 (void *)&w->running_animation_instance.win_ctx);
+		if (win_ctx->x_before != x_before) {
+			log_info("Script evaluation changed x_before");
+		}
 		if (result != SCRIPT_EVAL_OK) {
 			log_error("Failed to run animation script: %d", result);
 			return true;
@@ -1821,12 +1828,10 @@ bool win_process_animation_and_state_change(struct session *ps, struct win *w, d
 	}
 
 	auto win_ctx = win_script_context_prepare(ps, w);
-	log_debug("Animating with context, x: %d, y: %d, bx: %d, by: %d",
-		  win_ctx.g.y, win_ctx.g.x, win_ctx.previous.g.x, win_ctx.previous.g.y);
 	w->previous.opacity = w->opacity;
 
 	bool geometry_changed = !win_geometry_eq(w->previous.g, w->g);
-	/* w->previous.g = w->g; */
+	w->previous.g = w->g;
 
 	// Try to determine the right animation trigger based on state changes. Note there
 	// is some complications here. X automatically unmaps windows before destroying
@@ -1910,7 +1915,7 @@ bool win_process_animation_and_state_change(struct session *ps, struct win *w, d
 		          "is blocked.",
 		          animation_trigger_names[trigger], win_id(w), w->name);
 		return win_advance_animation(w, delta_t, &win_ctx);
-	}
+ 	}
 
 	auto wopts = win_options(w);
 	if (wopts.animations[trigger].script == NULL) {
@@ -1923,8 +1928,14 @@ bool win_process_animation_and_state_change(struct session *ps, struct win *w, d
 		return true;
 	}
 
-	log_debug("Starting animation %s for window %#010x (%s)",
+	log_info("Starting animation %s for window %#010x (%s)",
 	          animation_trigger_names[trigger], win_id(w), w->name);
+
+	log_info("Animating with context, x: %f, y: %f, bx: %f, by: %f",
+		 win_ctx.x, win_ctx.y, win_ctx.x_before, win_ctx.y_before);
+	log_info("Actual geometries: x: %d, y: %d, bx: %d, by: %d, px: %d, py: %d, ox: %d oy; %d",
+		  w->g.x, w->g.y, w->previous.g.x, w->previous.g.y,
+		 w->pending_g.x, w->pending_g.y);
 
 	if (win_check_flags_any(w, WIN_FLAGS_PIXMAP_STALE)) {
 		// Grab the old pixmap, animations might need it
@@ -1938,8 +1949,9 @@ bool win_process_animation_and_state_change(struct session *ps, struct win *w, d
 		w->win_image = NULL;
 	}
 
-	auto new_animation = script_instance_new(wopts.animations[trigger].script);
+	auto new_animation = script_instance_new(wopts.animations[trigger].script, &win_ctx);
 	if (w->running_animation_instance) {
+		log_info("New animation when there was already an animation");
 		// Interrupt the old animation and start the new animation from where the
 		// old has left off. Note we still need to advance the old animation for
 		// the last interval.
@@ -2027,7 +2039,7 @@ bool win_set_pending_geometry(struct win *w, struct win_geometry g) {
 
 		// At least one of the following if's is true
 		if (position_changed) {
-			log_trace("Window %#010x position changed, %dx%d -> %dx%d",
+			log_info("Window %#010x position changed, %dx%d -> %dx%d",
 			          win_id(w), w->g.x, w->g.y, g.x, g.y);
 			w->pending_g.x = g.x;
 			w->pending_g.y = g.y;
@@ -2035,7 +2047,7 @@ bool win_set_pending_geometry(struct win *w, struct win_geometry g) {
 		}
 
 		if (size_changed) {
-			log_trace("Window %#010x size changed, %dx%d -> %dx%d", win_id(w),
+			log_info("Window %#010x size changed, %dx%d -> %dx%d", win_id(w),
 			          w->g.width, w->g.height, g.width, g.height);
 			w->pending_g.width = g.width;
 			w->pending_g.height = g.height;
