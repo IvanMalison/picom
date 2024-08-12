@@ -1821,10 +1821,12 @@ bool win_process_animation_and_state_change(struct session *ps, struct win *w, d
 	}
 
 	auto win_ctx = win_script_context_prepare(ps, w);
+	log_debug("Animating with context, x: %d, y: %d, bx: %d, by: %d",
+		  win_ctx.g.y, win_ctx.g.x, win_ctx.previous.g.x, win_ctx.previous.g.y);
 	w->previous.opacity = w->opacity;
 
 	bool geometry_changed = !win_geometry_eq(w->previous.g, w->g);
-	w->previous.g = w->g;
+	/* w->previous.g = w->g; */
 
 	// Try to determine the right animation trigger based on state changes. Note there
 	// is some complications here. X automatically unmaps windows before destroying
